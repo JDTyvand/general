@@ -1,0 +1,412 @@
+\documentclass[a4paper,english,11pt,twoside]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{epsfig}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{pstricks}
+\usepackage{subfigure}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{gensymb}
+\usepackage{preamble}
+\restylefloat{table}
+\renewcommand{\arraystretch}{1.5}
+ \newcommand{\tab}{\hspace*{2em}}
+
+
+\date{\today}
+\title{Mandatory Assignment 1}
+\author{Jørgen D. Tyvand}
+
+\begin{document}
+\maketitle
+\newpage
+
+\section*{i)}
+I have used 6 meshes for each of the three geometric shapes, and halving the prescribed mesh element size at point from Gmsh for each consecutive mesh.\\
+\\
+I have issues with calling Gmsh in my Terminal, so i have hardcoded the meshes and loop over them in my code, as in this example for the ellipses (i had issues with powers in Expression as well hence the multiple multiplications):
+\begin{lstlisting} [style=python]
+ue=Expression('1/(2.*mu) * (-dpdx) * (a*a*b*b)/(a*a + b*b) *
+ (1 - x[0]*x[0]/(a*a) -x[1]*x[1]/(b*b))', dpdx=dpdx, 
+mu=mu, a=a, b=b)
+
+for i in range(1,4):
+	E = []; h = [];
+	for j in range(1,7):
+		mesh = Mesh('ellipse%s.xml' % j)
+\end{lstlisting}
+For the elliptical section, with analytical solution given by (3-47):\\
+\\
+$u(y,z) = -\frac{1}{2\mu}\left(\frac{d\hat{p}}{dx}\right)\frac{a^2b^2}{a^2 + b^2}\left(1 - \frac{y^2}{a^2} - \frac{z^2}{b^2}\right)$\\
+\\
+The output running FEniCS (with the same print format as Listing 4) gives:
+\begin{lstlisting} [style=terminal]
+For degree 1:
+h=2.05E-01 E=8.47E-04 r=2.33
+h=9.68E-02 E=2.35E-04 r=1.71
+h=4.96E-02 E=5.97E-05 r=2.05
+h=2.23E-02 E=1.58E-05 r=1.66
+h=1.06E-02 E=4.02E-06 r=1.83
+For degree 2:
+h=2.05E-01 E=2.19E-03 r=2.13
+h=9.68E-02 E=5.34E-04 r=1.88
+h=4.96E-02 E=1.38E-04 r=2.02
+h=2.23E-02 E=3.43E-05 r=1.74
+h=1.06E-02 E=8.54E-06 r=1.86
+For degree 3:
+h=2.05E-01 E=2.13E-03 r=2.10
+h=9.68E-02 E=5.26E-04 r=1.86
+h=4.96E-02 E=1.37E-04 r=2.01
+h=2.23E-02 E=3.42E-05 r=1.74
+h=1.06E-02 E=8.52E-06 r=1.86
+\end{lstlisting}
+I have experimented with higher order CG elements for this and the other two solutions. Once once the r-values of two consecutive orders are the same I have stopped looking at even higher orders.\\
+
+\newpage
+For the Eqilateral triangle with analytical solution (3-49):\\
+\\
+$u(y,z) = -\frac{d\hat{p}/dx}{2\sqrt{3}a\mu}\left(z - \frac{1}{2}a\sqrt(3)\right)(3y^2 - z^2)$\\
+\\
+the output starts acting strange at order 3 and above:
+\begin{lstlisting} [style=terminal]
+For degree 1:
+h=2.12E-01 E=4.07E-04 r=1.49
+h=1.01E-01 E=1.22E-04 r=1.63
+h=4.98E-02 E=3.38E-05 r=1.81
+h=2.43E-02 E=9.07E-06 r=1.83
+h=1.10E-02 E=2.30E-06 r=1.74
+For degree 2:
+h=2.12E-01 E=1.40E-05 r=2.15
+h=1.01E-01 E=1.80E-06 r=2.78
+h=4.98E-02 E=2.08E-07 r=3.04
+h=2.43E-02 E=2.39E-08 r=3.01
+h=1.10E-02 E=4.59E-09 r=2.09
+For degree 3:
+h=2.12E-01 E=1.86E-08 r=-2.14
+h=1.01E-01 E=2.05E-08 r=-0.13
+h=4.98E-02 E=1.59E-08 r=0.36
+h=2.43E-02 E=1.54E-08 r=0.04
+h=1.10E-02 E=1.52E-08 r=0.02
+For degree 4:
+h=2.12E-01 E=4.49E-09 r=0.24
+h=1.01E-01 E=4.08E-09 r=0.13
+h=4.98E-02 E=3.57E-09 r=0.19
+h=2.43E-02 E=2.45E-08 r=-2.68
+h=1.10E-02 E=2.56E-08 r=-0.06
+For degree 5:
+h=2.12E-01 E=6.85E-09 r=0.63
+h=1.01E-01 E=7.69E-09 r=-0.16
+h=4.98E-02 E=6.66E-09 r=0.20
+h=2.43E-02 E=6.03E-09 r=0.14
+h=1.10E-02 E=6.26E-09 r=-0.05
+\end{lstlisting}
+
+\newpage
+Finally for the eccentric annulus, with volute rate of flow given by (3-52):\\
+\\
+$Q = \frac{\pi}{8\mu}\left(-\frac{d\hat{p}}{dx}\right)\left[a^4 - b^4 - \frac{4c^2M^2}{\beta - \alpha} - 8c^2M^2\sum_{n=1}^{\infty}\frac{ne^{-n(\beta+\alpha}}{sinh(n\beta - n\alpha}\right]$\\
+\\
+$M = (F^2 - a^2)^{1/2}\tab F = \frac{a^2 - b^2 +c^2}{2c}\tab \alpha = \frac{1}{2}ln\frac{F + M}{F - M}\tab \beta = \frac{1}{2}ln\frac{F - c + M}{F - c - M}$\\\
+\\
+For this flow the numerical solution for the velocity was founc with FEniCS, and then integrated to compare with the exact solution for the flow.  The result of the computation is as follows:
+\begin{lstlisting} [style=terminal]
+For degree 1:
+h=1.02E-01 E=3.51E-03 r=1.70
+h=5.68E-02 E=1.07E-03 r=2.02
+h=2.75E-02 E=2.76E-04 r=1.87
+h=1.29E-02 E=7.22E-05 r=1.77
+h=6.23E-03 E=1.84E-05 r=1.87
+For degree 2:
+h=1.02E-01 E=1.20E-03 r=1.57
+h=5.68E-02 E=3.03E-04 r=2.34
+h=2.75E-02 E=6.32E-05 r=2.16
+h=1.29E-02 E=1.65E-05 r=1.77
+h=6.23E-03 E=4.07E-06 r=1.93
+For degree 3:
+h=1.02E-01 E=1.13E-03 r=1.48
+h=5.68E-02 E=2.90E-04 r=2.30
+h=2.75E-02 E=6.14E-05 r=2.14
+h=1.29E-02 E=1.63E-05 r=1.75
+h=6.23E-03 E=4.04E-06 r=1.92
+For degree 4:
+h=1.02E-01 E=1.11E-03 r=1.45
+h=5.68E-02 E=2.87E-04 r=2.30
+h=2.75E-02 E=6.10E-05 r=2.14
+h=1.29E-02 E=1.63E-05 r=1.75
+h=6.23E-03 E=4.03E-06 r=1.92
+\end{lstlisting}
+
+All in all the analytical solutions seem to be correct, as the errors are small and decrease with finer meshes. The values for the triangle geometry start to act strange at order 3 and higher though. The rate of convergence for the ellipse and eccentric annulus lie around 2 for all orders and finer meshes. But for the triangle the rate of convergence is close to 2 for degree 1 and 3 for degree 2, but fluctuate greatly for higher degrees. This behavior I have no explanation for.
+
+\newpage
+\section*{ii)}
+The equations (146) and (148) are as follows:\\
+\\
+(146)$\tab F''' + FF'' + 1 - (F')^2 = 0$\\
+(148)$\tab F''' + 2FF'' + 1 - (F')^2 = 0$\\
+\\
+These are the dimensionless equations for plane and axisymmetric stagnation flow, respectively.\\
+\\
+Starting with (146) and defining $H = F'$, we get two a system of coupled equations:\\
+\\
+$H - F' = 0$\\
+$H'' + FH' + 1 - H^2 = 0$\\
+\\
+To create a variational problem, we can multiply the first equation with a test function $v_f$ and the second equation with a test function $v_h$.\\
+\\
+By adding the two equations (both equalling 0), writing derivatives as gradients and integrating over the domain, we get the following equation:\\
+\\
+$\int_{\Omega}(Hv_f + \nabla F v_f + (\nabla^2 H) v_h + F \nabla h v_h + v_h - H^2v_h)dx = 0$\\
+\\
+Which by splitting up into multiple integrals becomes:\\
+\\
+$\int_{\Omega}Hv_fdx + \int_{\Omega}\nabla F v_fdx + \int_{\Omega}(\nabla^2 H) v_hdx +\\
+\\
+ \int_{\Omega} F \nabla h v_hdx + \int_{\Omega}v_hdx - \int_{\Omega}H^2v_hdx = 0$\\
+\\
+Using integration by parts, the integral for $(\nabla^2 h) v_h$ can be rewritten:\\
+\\
+$\int_{\Omega}(\nabla^2 H) v_h = - \int_{\Omega}\nabla H \cdot \nabla v_hdx + \int_{\partial\Omega}\frac{\partial H}{\partial n}v_hds$\\
+\\
+where the last integral vanishes since the test function vanishes on the boundary. The above integral equation then becomes:\\
+\\
+$\int_{\Omega}Hv_fdx + \int_{\Omega}\nabla F v_fdx - \int_{\Omega}\nabla H\cdot\nabla v_hdx + \\
+\\
+\int_{\Omega} F \nabla H v_hdx + \int_{\Omega}v_hdx - \int_{\Omega}H^2v_hdx = 0$\\
+
+\newpage
+For the Newton's method solution, the variational form is written in terms of known functions, where we use $H^k$ and $F^k$ as notation for the known solutions at iteration step k. The variational problem can then be written as follows:\\
+\\
+$\int_{\Omega}H^kv_fdx + \int_{\Omega}\nabla F^k v_fdx - \int_{\Omega}\nabla H^k\cdot\nabla v_hdx + \\
+\\
+\int_{\Omega} F^k \nabla H^k v_hdx + \int_{\Omega}v_hdx - \int_{\Omega}(H^k)^2v_hdx = 0$\\
+\\
+A snippet of the FEniCS code follows:
+\begin{lstlisting}[style=python]
+bc0 = DirichletBC(VV, Constant((0,0)), 
+"std::abs(x[0]) < 1e-10")
+bc1 = DirichletBC(VV.sub(1), Constant(1), 
+"std::abs(x[0]-%d) < 1e-10" % L)
+
+fh_=interpolate(Expression(("x[0]","x[0]")),VV)
+f_,h_=split(fh_)
+
+F = h_*vf*dx - f_.dx(0)*vf*dx - inner(grad(h_), grad(vh))*dx +
+ f_*h_.dx(0)*vh*dx + vh*dx - h_**2*vh*dx
+solve(F==0, fh_ , [bc0, bc1])
+
+f_,h_=split(fh_)
+\end{lstlisting}
+\newpage
+ the Newton solver finished in 5 iterations, giving the following plots for F and H:\\
+\begin{figure}[h!]
+\includegraphics[scale=0.4]{Mek4300/148_Newton_F_plot.png}
+\end{figure}
+\begin{figure}[h!]
+\includegraphics[scale=0.2]{Mek4300/148_Newton_H_plot.png}
+\end{figure}
+\newpage
+Similarly the variational problem for equation (148) becomes (as the only difference is the factor 2 in the $FF''$ term):\\
+\\
+$\int_{\Omega}H^kv_fdx + \int_{\Omega}\nabla F^k v_fdx - \int_{\Omega}\nabla H^k\cdot\nabla v_hdx + \\
+\\
+2\int_{\Omega} F^k \nabla H^k v_hdx + \int_{\Omega}v_hdx - \int_{\Omega}(H^k)^2v_hdx = 0$\\
+\\
+This is also solved in 5 iterations with the Newton solver in FEniCS, giving the following plots:\\
+\begin{figure}[h!]
+\includegraphics[scale=0.4]{Mek4300/146_Newton_F_plot.png}
+\end{figure}
+\begin{figure}[h!]
+\includegraphics[scale=0.2]{Mek4300/146_Newton_H_plot.png}
+\end{figure}
+
+\newpage
+For the Picard iterations we linearize the bilinear terms using the knowns solutions, but keep the trial functions where we can. The variational problem is therefore:\\
+\\
+$\int_{\Omega}Hv_fdx + \int_{\Omega}\nabla F v_fdx - \int_{\Omega}\nabla H\cdot\nabla v_hdx + \\
+\\
+\int_{\Omega} F^k \nabla H v_hdx + \int_{\Omega}v_hdx - \int_{\Omega}H H^kv_hdx = 0$\\
+\\
+for equation (146), and\\
+\\
+$\int_{\Omega}Hv_fdx + \int_{\Omega}\nabla F v_fdx - \int_{\Omega}\nabla H\cdot\nabla v_hdx + \\
+\\
+2\int_{\Omega} F^k \nabla H v_hdx + \int_{\Omega}v_hdx - \int_{\Omega}H H^kv_hdx = 0$\\
+\\
+for equation (148).\\
+\\
+The FEniCS code is similar, but the differences is use of known solutions and trial functions are clear:
+\begin{lstlisting}[style=python]
+fh_=interpolate(Expression(("x[0]","x[0]")),VV)
+f_,h_=split(fh_)
+
+F = h*vf*dx - f.dx(0)*vf*dx - inner(grad(h), grad(vh))*dx + 
+f_*h.dx(0)*vh*dx + vh*dx - h*h_*vh*dx
+
+k = 0
+fh_1 = Function(VV)
+while k < 100 and error > 1e-12:
+	solve(lhs(F) == rhs(F), fh_, [bc0, bc1])
+	error = errornorm(fh_, fh_1)
+	fh_1.assign(fh_)
+	print "Error = ", k, error
+	k += 1
+
+f_,h_=split(fh_)
+\end{lstlisting}
+\newpage
+The Picard solver in FEniCS solves both equations in 27 iterations, and the plots of F and H are as follows:\\
+\\
+For (146)
+\begin{figure}[h!]
+\includegraphics[scale=0.3]{Mek4300/146_Picard_F_plot.png}
+\end{figure}
+\begin{figure}[h!]
+\includegraphics[scale=0.15]{Mek4300/146_Picard_H_plot.png}
+\end{figure}
+
+For (148)
+\begin{figure}[h!]
+\includegraphics[scale=0.3]{Mek4300/148_Picard_F_plot.png}
+\end{figure}
+\begin{figure}[h!]
+\includegraphics[scale=0.15]{Mek4300/148_Picard_H_plot.png}
+\end{figure}
+
+\newpage
+\section*{iii)}
+Stokes flows, with low Reynolds numbers, are given by equations (160) and (161):\\
+\\
+(160)$\tab \mu\nabla^2\boldsymbol{u} = \nabla p$\\
+\\
+(161)$\tab \nabla\cdot\boldsymbol{u} = 0$\\
+\\
+To solve this problem in FEniCS, we can introduce the test functions v and q for velocity and pressure, and get the variational forms (after some integration by parts found in the lecture notes):\\
+\\
+$\int_{\Omega}\nabla\boldsymbol{v} : \nabla\boldsymbol{u}dx - \int_{\Omega}p\nabla\cdot\boldsymbol{v}dx = 0$\\
+\\
+$\int_{\Omega}q\nabla\cdot\boldsymbol{u}dx = 0$\\
+\\
+Solving this in FEniCS, we get the numerical solution for the velocity $\boldsymbol{u}$. Using the components u and v of $\boldsymbol{u}$, we can insert this into the vorticity equation (138):\\
+\\
+$\omega_z = \frac{\partial v}{\partial x} - \frac{\partial u}{\partial y}$\\
+\begin{lstlisting}[style=python]
+F = mu*inner(grad(v), grad(u))*dx - div(v)*p*dx - q*div(u)*dx 
++ Constant(0)*q*dx
+
+up_ = Function(VQ)
+solve(lhs(F) == rhs(F), up_, [bc0, bc1])
+
+u_,p_=up_.split()
+
+u, v = u_.split()
+
+w = v.dx(0) - u.dx(1)
+\end{lstlisting}
+\newpage
+Equation (139) gives the Poisson euqation for the streamfunction, and (162) is the variational problem derived from introducing a test function $\psi_v$ and integration by parts:\\
+\\
+(139)$\tab \nabla^2\psi = -\omega_z$\\
+\\
+(162)$\tab -\int_{\Omega}\nabla(\psi_v)\cdot\nabla(\psi)dx + \int_{\Gamma}\psi_v\nabla\psi\cdot\boldsymbol{n}ds = -\int_{\Omega}\psi_v\omega_z dx$\\
+\\
+The second term on the left vanishes in this case, since the streamfunction vanishes on the boundary. Using FEniCS to compute the streamfunction using the computed $\omega_z$ we get the following plot of the streamfunction:
+\begin{figure}[h!]
+\includegraphics[scale=0.4]{Mek4300/driven_cavity_plot.png}
+\end{figure}
+
+Using the following code, the location of the vortex can be found:
+\begin{lstlisting} [style=python]
+min = psi_.vector().array().argmin()
+x, y = mesh.coordinates()[min]
+print('The location of the vortex is at x=%f, y=%f' % (x, y))
+\end{lstlisting}
+Giving the following output:
+\begin{lstlisting} [style=terminal]
+The location of the vortex is at x=0.500000, y=0.766667
+\end{lstlisting}
+Whichs seems to correspond well with the location of the smallest value in the plot of the streamfunction.
+
+\newpage
+\section*{iv)}
+In this problem we reintroduce the second term on the left hand of (162) to account for the pseudo-traction. Boundary conditions for the streamfunction are then removed in the FEniCS calculations. The rest of the calculation procedure is basically the same as for the previous problem.\\
+\begin{lstlisting} [style=python]
+n=FacetNormal(mesh)
+psi_ = Function(Q)
+grad_psi = as_vector((-v,u))
+F = -inner(grad(psiv), grad(psi))*dx + psiv*dot(grad_psi,n)*ds 
++ psiv*w*dx
+solve(lhs(F) == rhs(F), psi_)
+\end{lstlisting}
+
+\section*{a)}
+Using 6 meshes with gradually finer mesh size, the mesh size vs. vortex location is as follows (hardcoded meshes looped as withe the geometric shapes in i) ):
+\begin{lstlisting} [style=terminal]
+h=1.53E-01, vortex at x=0.629419, y=0.078173
+h=1.02E-01, vortex at x=0.561029, y=0.054365
+h=5.17E-02, vortex at x=0.546957, y=0.043865
+h=2.70E-02, vortex at x=0.541539, y=0.042529
+h=1.33E-02, vortex at x=0.536613, y=0.036885
+h=6.25E-03, vortex at x=0.538062, y=0.034050
+\end{lstlisting}
+This approaches a vortex location that corresponds with the location in figure 3-37 in White. (to the right of and below the step).
+\newpage
+\section*{b)}
+The following is a contour plot of the streamfunction (for the finest mesh), in the area 0.4 $\leq$ x $\leq$ 0.6 and y $\leq$ 0.15:\\
+\begin{figure}[h!]
+\includegraphics[scale=0.4]{Mek4300/step_contour.png}
+\end{figure}
+
+This shows that the vortex is located as indicated by the values found above.
+
+\section*{c)}
+To calculate the velocity flux was found by computing as suggested in the assignment, as given for the left side, and aditional code to calculate for the right hand side (the outlet). To calculate the integral, we must add the velocity u to the assemble call, which becomes:\\
+\begin{lstlisting} [style=python]
+Q_left = assemble(Constant(1)*u*ds(1), 
+exterior_facet_domains=mfl, mesh=mesh)
+
+Q_right = assemble(Constant(1)*u*ds(1), 
+exterior_facet_domains=mfr, mesh=mesh)
+\end{lstlisting}
+The output from the calculation shows that the flux is the same through both the inlet and the outlet, and thus mass is conserved:
+\begin{lstlisting} [style=terminal]
+The velocity flux into the domain is 0.212614 
+The velocity flux out of the domain is 0.212614 
+\end{lstlisting}
+\newpage
+\section*{d)}
+Changing the Dirichlet boundary condition in FEniCS to reverse the flow at the top lid, the output of mesh size vs location of vortex becomes:
+\begin{lstlisting} [style=terminal]
+h=1.53E-01, vortex at x=0.629419, y=0.078173
+h=1.02E-01, vortex at x=0.561029, y=0.054365
+h=5.17E-02, vortex at x=0.546957, y=0.043865
+h=2.70E-02, vortex at x=0.541539, y=0.042529
+h=1.33E-02, vortex at x=0.536613, y=0.036885
+h=6.25E-03, vortex at x=0.538062, y=0.034050
+\end{lstlisting}
+This is the exact same result as before, so the location of the vortex is not changed by changing the direction of flow.\\
+
+\section*{e)}
+The following code calculates the stress in FEniCS:
+\begin{lstlisting} [style=python]
+tau = -p_*Identity(2) + mu*(grad(u_) + transpose(grad(u_)))
+Bottom = AutoSubDomain(bottom)
+mfb = FacetFunction("size_t", mesh)
+mfb.set_all(0)
+Bottom.mark(mfb, 1)
+stress = assemble(Constant(1)*dot(dot(tau,n),n)*ds(1), 
+exterior_facet_domains=mfb, mesh=mesh)
+\end{lstlisting}
+Where bottom is a predefined function returning the bottom wall. The output with the original direction flow is:
+\begin{lstlisting} [style=terminal]
+The normal stress on the bottom wall is 119.986589
+\end{lstlisting}
+Changing the direction of flow, the output is:
+\begin{lstlisting} [style=terminal]
+The normal stress on the bottom wall is -119.986589
+\end{lstlisting}
+So the computed normal stress changes sign with the direction of flow.\\
+ \end{document}
